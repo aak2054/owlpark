@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1f3a">
+  <title>OwlPark</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="owlpark.css">
+</head>
+<body>
+<div class="app">
+  <!-- Desktop sidebar -->
+  <aside class="sidebar">
+    <a class="brand" href="#dashboard"><span class="logo" data-logo></span><span>Owl<b>Park</b></span></a>
+    <nav class="side-nav">
+      <a href="#dashboard" data-nav="dashboard"><i data-icon="grid"></i>Dashboard</a>
+      <a href="#map" data-nav="map"><i data-icon="map"></i>Live map</a>
+      <a href="#find" data-nav="find"><i data-icon="search"></i>Find parking</a>
+      <a href="#bus" data-nav="bus"><i data-icon="bus"></i>Big Owl Bus</a>
+      <a href="#ops" data-nav="ops"><i data-icon="pulse"></i>Sensor ops</a>
+    </nav>
+    <div class="side-foot">
+      <div class="side-status"><span class="dot" id="bridge-dot"></span><span id="bridge-text">Demo simulation</span></div>
+      <div class="side-clock"><i data-icon="clock"></i>Demo clock <b data-clock></b></div>
+      <p>Student hackathon prototype for Kennesaw State. Not an official KSU service.</p>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="demo-banner" role="note">
+      <i data-icon="alert"></i>
+      <span><b>Prototype</b> · All parking data is simulated for demo purposes. This is not live KSU parking information.</span>
+    </div>
+
+    <header class="topbar">
+      <a class="brand brand-mobile" href="#dashboard"><span class="logo" data-logo></span><span>Owl<b>Park</b></span></a>
+      <h1 id="page-title">Dashboard</h1>
+      <div class="top-right">
+        <div class="seg seg-sm campus-seg" id="campus-seg" role="group" aria-label="Campus"></div>
+        <span class="chip-live"><i></i>Live</span>
+        <span class="chip-clock"><i data-icon="clock"></i><span data-clock></span></span>
+      </div>
+    </header>
+
+    <main class="content">
+      <!-- ================= DASHBOARD ================= -->
+      <section class="view" id="view-dashboard">
+        <div class="hero">
+          <div class="hero-main">
+            <div class="eyebrow" id="hero-eyebrow">Kennesaw campus · demo data</div>
+            <h2><span id="hero-open" class="hero-num">0</span><span class="hero-unit">open spaces right now</span></h2>
+            <p id="hero-sub" class="hero-sub"></p>
+            <div class="hero-actions">
+              <a href="#find" class="btn btn-gold"><i data-icon="search"></i>Find parking</a>
+              <a href="#find" class="btn btn-glass" data-ask-focus><i data-icon="sparkle"></i>Ask OwlPark</a>
+              <a href="#map" class="btn btn-glass"><i data-icon="map"></i>Open live map</a>
+            </div>
+          </div>
+          <div class="hero-side" id="hero-best"></div>
+        </div>
+
+        <div class="kpis" id="kpis"></div>
+
+        <div class="dash-grid">
+          <div>
+            <div class="section-head">
+              <h3>Parking lots</h3>
+              <label class="permit-pick"><span>Your permit</span><select class="select-sm" id="dash-permit" data-permit-select aria-label="Your parking permit"></select></label>
+            </div>
+            <div class="lot-cards" id="lot-cards"></div>
+          </div>
+          <aside class="stack">
+            <div class="card">
+              <div class="card-head"><h3>Sensor network</h3><span class="badge badge-green" id="net-badge">Healthy</span></div>
+              <div id="net-status"></div>
+            </div>
+            <div class="card">
+              <div class="card-head"><h3>Live sensor activity</h3><span class="live-dot">Live</span></div>
+              <ul class="feed" id="feed"></ul>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ================= MAP ================= -->
+      <section class="view" id="view-map" hidden>
+        <div class="view-head">
+          <div>
+            <h2 id="map-title">Live campus map</h2>
+            <p class="muted">Each square is one sensor-equipped space. Lots your permit doesn't cover are faded. Tap a space to simulate a car arriving or leaving.</p>
+          </div>
+          <label class="permit-pick"><span>Your permit</span><select class="select-sm" id="map-permit" data-permit-select aria-label="Your parking permit"></select></label>
+        </div>
+        <div class="map-layout">
+          <div class="card map-card">
+            <div class="legend">
+              <span><i class="lg open"></i>Open</span>
+              <span><i class="lg occ"></i>Occupied</span>
+              <span><i class="lg off"></i>No signal</span>
+              <label class="bus-toggle"><input type="checkbox" id="bus-toggle" checked><i class="lg bus"></i>Big Owl Bus</label>
+              <div class="seg seg-sm map-theme" role="group" aria-label="Map style"><button type="button" data-map-theme="day">Day</button><button type="button" data-map-theme="night">Night</button></div>
+              <span class="legend-note">Schematic, not to scale · Simulated data</span>
+            </div>
+            <div class="map-scroll" id="map-main"></div>
+          </div>
+          <aside class="card lot-panel" id="lot-panel"></aside>
+        </div>
+      </section>
+
+      <!-- ================= FIND ================= -->
+      <section class="view" id="view-find" hidden>
+        <div class="view-head">
+          <div>
+            <h2>Find parking</h2>
+            <p class="muted">Tell OwlPark where you're headed and when, on either KSU campus. It picks the lot most likely to have space with the shortest walk.</p>
+          </div>
+        </div>
+        <div class="card ask-card" id="ask-card">
+          <div class="ask-head">
+            <span class="ask-icon"><i data-icon="sparkle"></i></span>
+            <div class="ask-title"><h3>Ask OwlPark <span class="badge badge-gray" id="ask-status">AI</span></h3>
+              <p class="muted">Say where you're going in your own words. Claude picks the lot, the open space and the bus, using live sensor data.</p></div>
+            <button type="button" class="btn btn-ghost btn-sm" id="ask-reset" hidden>New chat</button>
+          </div>
+          <div class="ask-log" id="ask-log" aria-live="polite" hidden></div>
+          <form class="ask-form" id="ask-form">
+            <button type="button" class="icon-btn ask-mic" id="ask-mic" hidden aria-label="Speak your question"><i data-icon="mic"></i></button>
+            <input id="ask-input" autocomplete="off" maxlength="400" placeholder="e.g. I have class in the Atrium at 9:30 and an East permit" aria-label="Ask OwlPark">
+            <button class="btn btn-primary" type="submit"><i data-icon="send"></i>Ask</button>
+          </form>
+          <div class="ask-suggest" id="ask-suggest">
+            <button type="button" data-ask="I have class in the Atrium Building at 9:30 and an East permit. Where should I park?">Class in the Atrium at 9:30, East permit</button>
+            <button type="button" data-ask="I need to be at Carmichael Student Center by 10. I have a North Commuter permit.">Carmichael by 10, North permit</button>
+            <button type="button" data-ask="Which Kennesaw lots have the most space right now?">Where's space on Kennesaw right now?</button>
+            <button type="button" data-ask="I'm parked on the Kennesaw campus. When's the next bus to Marietta?">Next bus to Marietta?</button>
+          </div>
+        </div>
+
+        <div class="find-layout">
+          <form class="card find-form" id="find-form">
+            <label class="field">
+              <span>Where are you going?</span>
+              <select id="f-place"></select>
+            </label>
+            <label class="field">
+              <span>Need to be there by</span>
+              <input type="time" id="f-time" required>
+            </label>
+            <label class="field">
+              <span>Your permit</span>
+              <select id="f-permit" data-permit-select></select>
+              <small class="field-hint">Only lots your permit covers are recommended. KSU permits work in the same area on both campuses.</small>
+            </label>
+            <button class="btn btn-primary btn-block" type="submit"><i data-icon="search"></i>Find my spot</button>
+            <p class="fine">Predictions combine live sensor counts with typical demand at that time of day. This is a demo model.</p>
+          </form>
+
+          <div class="find-results">
+            <div id="find-empty" class="card empty">
+              <div class="empty-art"><i data-icon="pin"></i></div>
+              <h3>Where to?</h3>
+              <p class="muted">Pick a destination and arrival time to get a recommended lot, how many spaces should be open, and your walking route.</p>
+            </div>
+            <div id="find-warn"></div>
+            <div id="find-best"></div>
+            <div id="find-bus"></div>
+            <div class="card map-card" id="find-map-card" hidden>
+              <div class="card-head"><h3>Walking route</h3><span class="muted small" id="find-route-label"></span></div>
+              <div class="map-scroll" id="find-map"></div>
+            </div>
+            <div id="find-alts"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= BUS ================= -->
+      <section class="view" id="view-bus" hidden>
+        <div class="view-head">
+          <div>
+            <h2>Big Owl Bus</h2>
+            <p class="muted">KSU's shuttle between the Kennesaw and Marietta campuses, parking lots and nearby housing. Routes, stops and hours are from KSU's Fall 2026 route list.</p>
+          </div>
+          <a class="btn btn-ghost" href="https://kennesawstate.passiogo.com/" target="_blank" rel="noopener"><i data-icon="bus"></i>Live buses in Passio GO!</a>
+        </div>
+        <div class="card bus-between">
+          <div class="card-head"><h3>Between campuses · next departures</h3><span class="badge badge-gold">Demo schedule</span></div>
+          <div class="bb-grid" id="bus-between"></div>
+          <p class="fine">KSU doesn't publish bus frequencies, so the times here use an assumed demo schedule on the demo clock. CobbLinc's Rapid 10 also runs between the campuses.</p>
+        </div>
+        <div class="route-grid" id="bus-routes"></div>
+      </section>
+
+      <!-- ================= OPS ================= -->
+      <section class="view" id="view-ops" hidden>
+        <div class="view-head">
+          <div>
+            <h2 id="ops-title">Sensor operations</h2>
+            <p class="muted">For parking staff: sensor health, battery alerts, and availability by lot.</p>
+          </div>
+          <span class="badge badge-navy">Staff view · demo</span>
+        </div>
+        <div class="kpis" id="ops-kpis"></div>
+        <div class="ops-grid">
+          <div class="card">
+            <div class="card-head"><h3>Alerts</h3><span class="badge" id="alert-count"></span></div>
+            <ul class="alerts" id="alerts"></ul>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Availability by lot</h3></div>
+            <div class="table-wrap"><table class="table" id="ops-table"></table></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head wrap">
+            <h3>Sensor inventory</h3>
+            <div class="row-gap">
+              <select id="ops-lot" class="select-sm"></select>
+              <div class="seg seg-sm" id="ops-filter">
+                <button type="button" data-ofilter="all" class="active">All</button>
+                <button type="button" data-ofilter="low">Low battery</button>
+                <button type="button" data-ofilter="offline">Offline</button>
+              </div>
+            </div>
+          </div>
+          <div class="sensor-layout">
+            <div class="sensor-scroll"><div class="sensor-grid" id="sensor-grid"></div></div>
+            <div class="sensor-detail" id="sensor-detail"></div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="foot">
+        OwlPark prototype · Built for a KSU hackathon · Simulated data only, not affiliated with KSU Parking &amp; Transportation.
+        <a href="v1/">View the v1 prototype</a>
+      </footer>
+    </main>
+  </div>
+</div>
+
+<!-- Mobile bottom nav -->
+<nav class="bottom-nav">
+  <a href="#dashboard" data-nav="dashboard"><i data-icon="grid"></i><span>Home</span></a>
+  <a href="#map" data-nav="map"><i data-icon="map"></i><span>Map</span></a>
+  <a href="#find" data-nav="find"><i data-icon="search"></i><span>Find</span></a>
+  <a href="#bus" data-nav="bus"><i data-icon="bus"></i><span>Bus</span></a>
+  <a href="#ops" data-nav="ops"><i data-icon="pulse"></i><span>Ops</span></a>
+</nav>
+
+<!-- Simulator -->
+<button class="sim-fab" id="sim-open"><i data-icon="sliders"></i><span>Simulator</span></button>
+<div class="scrim" id="scrim" hidden></div>
+<aside class="sim" id="sim" aria-label="Demo simulator">
+  <div class="sim-head">
+    <div>
+      <h3>Demo simulator</h3>
+      <p>Stands in for ESP32 sensors. Scenarios run on the campus you're viewing.</p>
+    </div>
+    <button class="icon-btn" id="sim-close" aria-label="Close simulator"><i data-icon="x"></i></button>
+  </div>
+  <div class="sim-body">
+    <section class="sim-sec">
+      <h4>Single car</h4>
+      <select id="sim-lot"></select>
+      <div class="sim-btns two">
+        <button class="btn btn-red" id="sim-arrive"><i data-icon="down"></i>Car arrives</button>
+        <button class="btn btn-green" id="sim-leave"><i data-icon="up"></i>Car leaves</button>
+      </div>
+      <p class="hint">Tip: you can also tap any space on the live map.</p>
+    </section>
+    <section class="sim-sec">
+      <h4>Scenarios</h4>
+      <div class="scenarios">
+        <button data-scn="rush"><b>Morning rush</b><span>Student lots fill fast at 8:50 AM</span></button>
+        <button data-scn="change"><b>Class change</b><span>Cars leave, then a new wave arrives</span></button>
+        <button data-scn="event"><b>Campus event</b><span>Lots near the Convocation Center (Kennesaw) or Event Center (Marietta) fill up</span></button>
+        <button data-scn="evening"><b>Evening clear-out</b><span>Campus empties at 5:30 PM</span></button>
+      </div>
+    </section>
+    <section class="sim-sec">
+      <h4>Sensor network</h4>
+      <div class="sim-btns">
+        <button class="btn btn-ghost" data-fault="offline"><i data-icon="wifi"></i>Knock a sensor offline</button>
+        <button class="btn btn-ghost" data-fault="battery"><i data-icon="battery"></i>Trigger low-battery alert</button>
+        <button class="btn btn-ghost" data-fault="restore"><i data-icon="check"></i>Restore all sensors</button>
+      </div>
+    </section>
+    <section class="sim-sec">
+      <h4>Background traffic</h4>
+      <label class="switch"><input type="checkbox" id="sim-auto" checked><span class="track"></span>Auto traffic &amp; demo clock</label>
+      <div class="seg seg-sm" id="sim-speed">
+        <button type="button" data-speed="1" class="active">1×</button>
+        <button type="button" data-speed="3">3×</button>
+        <button type="button" data-speed="8">8×</button>
+      </div>
+      <div class="sim-clock"><i data-icon="clock"></i>Demo clock <b data-clock></b></div>
+    </section>
+    <button class="btn btn-ghost btn-block" id="sim-reset"><i data-icon="refresh"></i>Reset demo data</button>
+  </div>
+</aside>
+
+<div id="toasts" class="toasts" aria-live="polite"></div>
+<script src="campus-data.js"></script>
+<script src="owlpark.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "ksu-parking",
+  "version": "0.1.0",
+  "description": "Real-time campus parking availability driven by per-slot sensors",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.js",
+    "simulate": "node simulator.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.10.0"
+  },
+  "engines": {
+    "node": ">=22.9"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "lots": [
+    { "id": "north-deck",      "campus": "kennesaw",  "name": "North Deck",            "permits": ["student"],          "permitTypes": ["north"],                "rows": 4, "slotsPerRow": 10 },
+    { "id": "lot-l",           "campus": "kennesaw",  "name": "Lot L",                 "permits": ["faculty"],          "permitTypes": ["faculty"],              "rows": 3, "slotsPerRow": 8 },
+    { "id": "central-deck",    "campus": "kennesaw",  "name": "Central Deck",          "permits": ["student"],          "permitTypes": ["central"],              "rows": 4, "slotsPerRow": 12 },
+    { "id": "v2-visitor",      "campus": "kennesaw",  "name": "V2 Visitor Lot",        "permits": ["visitor"],          "permitTypes": ["visitor"],              "rows": 3, "slotsPerRow": 6 },
+    { "id": "west-deck",       "campus": "kennesaw",  "name": "West Deck",             "permits": ["student"],          "permitTypes": ["west"],                 "rows": 5, "slotsPerRow": 8 },
+    { "id": "lot-b",           "campus": "kennesaw",  "name": "Lot B",                 "permits": ["faculty"],          "permitTypes": ["faculty"],              "rows": 4, "slotsPerRow": 10 },
+    { "id": "east-deck",       "campus": "kennesaw",  "name": "East Deck",             "permits": ["student"],          "permitTypes": ["east"],                 "rows": 5, "slotsPerRow": 10 },
+    { "id": "west-lot",        "campus": "kennesaw",  "name": "West Lot",              "permits": ["student"],          "permitTypes": ["west"],                 "rows": 3, "slotsPerRow": 8 },
+    { "id": "east-economy",    "campus": "kennesaw",  "name": "East Economy Lot",      "permits": ["student"],          "permitTypes": ["east-economy"],         "rows": 4, "slotsPerRow": 12 },
+    { "id": "town-point",      "campus": "kennesaw",  "name": "Town Point Economy",    "permits": ["student"],          "permitTypes": ["town-point"],           "rows": 4, "slotsPerRow": 10 },
+    { "id": "mar-central-1",   "campus": "marietta",  "name": "Central Lot 1",         "permits": ["student"],          "permitTypes": ["central"],              "rows": 3, "slotsPerRow": 12 },
+    { "id": "mar-central-2",   "campus": "marietta",  "name": "Central Lot 2",         "permits": ["student"],          "permitTypes": ["central"],              "rows": 4, "slotsPerRow": 10 },
+    { "id": "mar-lot-y",       "campus": "marietta",  "name": "Lot Y",                 "permits": ["faculty"],          "permitTypes": ["faculty"],              "rows": 3, "slotsPerRow": 6 },
+    { "id": "mar-east-1",      "campus": "marietta",  "name": "East Lot 1",            "permits": ["student"],          "permitTypes": ["east"],                 "rows": 3, "slotsPerRow": 8 },
+    { "id": "mar-east-2",      "campus": "marietta",  "name": "East Lot 2",            "permits": ["student"],          "permitTypes": ["east"],                 "rows": 4, "slotsPerRow": 10 },
+    { "id": "mar-visitor",     "campus": "marietta",  "name": "Visitor Parking",       "permits": ["visitor"],          "permitTypes": ["visitor"],              "rows": 2, "slotsPerRow": 6 },
+    { "id": "mar-west-deck",   "campus": "marietta",  "name": "West Deck (Marietta)",  "permits": ["student","visitor"],"permitTypes": ["west","visitor"],       "rows": 4, "slotsPerRow": 10 },
+    { "id": "mar-south-lot",   "campus": "marietta",  "name": "South Lot",             "permits": ["student"],          "permitTypes": ["south-lot"],            "rows": 3, "slotsPerRow": 10 },
+    { "id": "mar-lot-e",       "campus": "marietta",  "name": "Lot E",                 "permits": ["faculty"],          "permitTypes": ["faculty"],              "rows": 3, "slotsPerRow": 6 }
+  ]
+}

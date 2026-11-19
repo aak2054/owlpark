@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KSU Parking</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="title">
+      <h1>KSU Parking</h1>
+      <span id="conn" class="conn">Connecting…</span>
+    </div>
+    <p id="total" class="total"></p>
+    <nav id="filters">
+      <button data-permit="all" class="active">All</button>
+      <button data-permit="student">Student</button>
+      <button data-permit="faculty">Faculty</button>
+      <button data-permit="visitor">Visitor</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="lots" class="lots"></section>
+
+    <section id="detail" class="detail" hidden>
+      <button id="back" class="back">← All lots</button>
+      <h2 id="detail-name"></h2>
+      <p id="detail-stats"></p>
+      <div class="legend">
+        <span><i class="free"></i>Free</span>
+        <span><i class="occupied"></i>Occupied</span>
+        <span><i class="offline"></i>No signal</span>
+      </div>
+      <div id="grid" class="grid"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

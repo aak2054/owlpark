@@ -63,7 +63,13 @@ destination, arrival time and permit, then calls OwlPark's own tools and answers
 the exact open space, when to park, the walk, and the Big Owl Bus when it's faster.
 
 - **Tools Claude can call** (they run in the browser, on the same live data the app shows):
-  `find_parking` (also fills in the Find parking screen and draws the route), `get_lot_status`, `get_bus_departures`.
+  `find_parking` (also fills in the Find parking screen and draws the route), `plan_day`, `get_lot_status`, `get_bus_departures`.
+- **Walking directions:** every route becomes plain steps ("Exit East Lot 2 on the south side, head west past Shore
+  Innovation Center, turn left…"), naming the buildings you pass and the roads you cross. They show under the route
+  map, and the assistant can read them out.
+- **Plan my day:** *"Atrium at 9:30, Norton Hall at 11, Carmichael at 2, East permit"* → one lot per campus that keeps
+  walking shortest, the walk between classes, when moving the car during a long break is worth it, and a drive-or-bus
+  step when the day switches campuses. Shown as a "Your day" timeline on the Find parking screen.
 - **Server side** (`ai.js`, `POST /api/ask`): holds the API key and sets the model, system prompt and tool list; the
   browser only sends the conversation. Effort is `low` for quick chat replies, and server-side refusal fallback is on.
 - **No key or no internet?** The assistant says so, and the regular form keeps working.

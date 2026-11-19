@@ -41,12 +41,15 @@ How to work:
   - Map the place the person names to a destination id from the list below (for example "the library on Marietta" is johnson-library, "the student center at Kennesaw" is carmichael).
   - If they don't give a time, use about 20 minutes after the current demo time, rounded to 5 minutes.
   - If they don't name a permit, use their saved permit from the context line. If none is saved, ask which permit they have in one short question.
+- If the person mentions more than one class or stop in a day, or asks you to plan their day, call plan_day once with all of them instead of find_parking.
 - For "how full is X" or "where is there space right now", call get_lot_status. For bus times, call get_bus_departures.
 - Each user message starts with a [Context: ...] line written by the app (demo time, saved permit, campus on screen). Use it, but don't repeat it back.
 
 How to answer:
 - 2 to 4 short sentences, friendly and direct, like a text from a friend who knows campus. Plain text; you may wrap the lot name and space number in **double asterisks**.
 - Lead with the action: which lot, which space, and when to park. Then the walk, and the bus if the tool returned a bus option that is faster or saves a long walk.
+- Walking directions: by default, sum them up in one short clause using the key landmark (for example "head west past Norton Hall"). If the person asks how to get there, give the walking_directions steps as a short numbered list.
+- Day plans: give a short timeline, one line per step (park, each class, back to the car), plus any tip about moving the car or switching campuses. This is the one case where more than 4 sentences is fine.
 - If find_parking reports no lots for their permit on that campus, explain the park-and-ride option it returns.
 - All parking numbers are simulated demo data from a prototype; say so only if someone asks whether the data is real. Don't present OwlPark as an official KSU service.
 - If asked about something unrelated to campus parking or getting around campus, say briefly that you only help with parking and the Big Owl Bus.
@@ -77,6 +80,37 @@ const TOOLS = [
         permit: { type: "string", enum: campus.PERMIT_TYPES.map((p) => p.id), description: "Permit type id." },
       },
       required: ["destination", "arrive_by", "permit"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "plan_day",
+    description:
+      "Plan parking for a whole day with several classes (on one or both campuses), for one permit. " +
+      "Per campus it picks the one lot that keeps the walk to the first class and back from the last class shortest and is likely to have space, " +
+      "gives walking directions to the first class, the walk between each pair of classes, the walk back to the car, " +
+      "tips when moving the car during a long break is worth it, and a bus or drive step when the day switches campuses. " +
+      "Also shows the plan in the app's Find parking screen.",
+    strict: true,
+    input_schema: {
+      type: "object",
+      properties: {
+        classes: {
+          type: "array",
+          description: "Every class or stop in the day, in any order.",
+          items: {
+            type: "object",
+            properties: {
+              destination: { type: "string", enum: campus.PLACES.map((p) => p.id) },
+              arrive_by: { type: "string", description: "24-hour HH:MM the person must be there." },
+            },
+            required: ["destination", "arrive_by"],
+            additionalProperties: false,
+          },
+        },
+        permit: { type: "string", enum: campus.PERMIT_TYPES.map((p) => p.id) },
+      },
+      required: ["classes", "permit"],
       additionalProperties: false,
     },
   },

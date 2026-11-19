@@ -133,6 +133,7 @@
           <div class="ask-suggest" id="ask-suggest">
             <button type="button" data-ask="I have class in the Atrium Building at 9:30 and an East permit. Where should I park?">Class in the Atrium at 9:30, East permit</button>
             <button type="button" data-ask="I need to be at Carmichael Student Center by 10. I have a North Commuter permit.">Carmichael by 10, North permit</button>
+            <button type="button" data-ask="Plan my day: I have class in the Atrium Building at 9:30, Norton Hall at 11:00 and Architecture at 2:00. East permit.">Plan my day: 3 classes, East permit</button>
             <button type="button" data-ask="Which Kennesaw lots have the most space right now?">Where's space on Kennesaw right now?</button>
             <button type="button" data-ask="I'm parked on the Kennesaw campus. When's the next bus to Marietta?">Next bus to Marietta?</button>
           </div>
@@ -164,11 +165,13 @@
               <p class="muted">Pick a destination and arrival time to get a recommended lot, how many spaces should be open, and your walking route.</p>
             </div>
             <div id="find-warn"></div>
+            <div id="find-day"></div>
             <div id="find-best"></div>
             <div id="find-bus"></div>
             <div class="card map-card" id="find-map-card" hidden>
               <div class="card-head"><h3>Walking route</h3><span class="muted small" id="find-route-label"></span></div>
               <div class="map-scroll" id="find-map"></div>
+              <ol class="walk-steps" id="find-directions" aria-label="Walking directions"></ol>
             </div>
             <div id="find-alts"></div>
           </div>

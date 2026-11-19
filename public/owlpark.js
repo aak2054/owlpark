@@ -346,6 +346,133 @@ function parkAndRide(place, needBy, permit) {
 }
 
 // =====================================================================
+// Walking directions: turn the drawn route (an L-shaped walk) into plain steps,
+// naming the buildings you pass and the roads you cross. North is up on the maps.
+// =====================================================================
+const COMPASS = { E: 'east', W: 'west', N: 'north', S: 'south' };
+const TURNS = { 'E>S': 'right', 'S>W': 'right', 'W>N': 'right', 'N>E': 'right', 'E>N': 'left', 'N>W': 'left', 'W>S': 'left', 'S>E': 'left' };
+const headingOf = (p, q) => {
+  const dx = q.x - p.x, dy = q.y - p.y;
+  if (Math.abs(dx) < 2 && Math.abs(dy) < 2) return null;
+  return Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? 'E' : 'W') : (dy > 0 ? 'S' : 'N');
+};
+const sideOfRect = (r, p) => (Math.abs(p.y - r.y) < 1 ? 'north' : Math.abs(p.y - (r.y + r.h)) < 1 ? 'south' : Math.abs(p.x - r.x) < 1 ? 'west' : 'east');
+/** Road polylines (control points of curves are close enough for crossing checks). */
+const roadPoints = (d) => { const n = d.match(/-?\d+(\.\d+)?/g).map(Number), pts = []; for (let i = 0; i + 1 < n.length; i += 2) pts.push({ x: n[i], y: n[i + 1] }); return pts; };
+function segmentsCross(p1, p2, p3, p4) {
+  const d = (a, b, c) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+  return d(p3, p4, p1) * d(p3, p4, p2) < 0 && d(p1, p2, p3) * d(p1, p2, p4) < 0;
+}
+const joinNames = (a) => (a.length <= 1 ? a.join('') : `${a.slice(0, -1).join(', ')} and ${a[a.length - 1]}`);
+
+/** Plain-language steps for walking from a lot (or a bus stop) to a place. */
+function walkDirections(from, place, { fromStop = false } = {}) {
+  const rect = fromStop ? { x: from.x, y: from.y, w: 0, h: 0, campus: from.campus } : from;
+  const w = walkInfo(rect, place), campus = campusOf(place), mpp = campus.mpp * DETOUR;
+  const steps = [fromStop ? `Get off at the ${from.name} stop` : `Exit ${from.short || from.name} on the ${sideOfRect(rect, w.a)} side`];
+  const legs = [[w.a, w.mid], [w.mid, w.b]].filter(([p, q]) => headingOf(p, q));
+  let prev = null;
+  const named = new Set(); // name each landmark once
+  legs.forEach(([p, q], i) => {
+    const h = headingOf(p, q), len = Math.abs(q.x - p.x) + Math.abs(q.y - p.y);
+    const hv = { x: Math.sign(q.x - p.x), y: Math.sign(q.y - p.y) };
+    const near = placesIn(place.campus).filter((b) => b.id !== place.id).map((b) => {
+      const xmin = Math.min(p.x, q.x), xmax = Math.max(p.x, q.x), ymin = Math.min(p.y, q.y), ymax = Math.max(p.y, q.y);
+      const dx = Math.max(b.x - xmax, 0, xmin - (b.x + b.w)), dy = Math.max(b.y - ymax, 0, ymin - (b.y + b.h));
+      const c = center(b), side = hv.x * (c.y - p.y) - hv.y * (c.x - p.x) > 0 ? 'right' : 'left';
+      return { b, dist: Math.hypot(dx, dy), along: hv.x * (c.x - p.x) + hv.y * (c.y - p.y), side };
+    }).filter((n) => n.dist <= 26 && n.along > 0 && n.along < len && !named.has(n.b.id)).sort((a, b) => a.along - b.along).slice(0, 2);
+    near.forEach((n) => named.add(n.b.id));
+    const crosses = campus.roads.filter((r) => { const pts = roadPoints(r.d); return pts.slice(1).some((s, k) => segmentsCross(p, q, pts[k], s)); }).map((r) => r.label);
+    const meters = Math.max(10, Math.round((len * mpp) / 10) * 10);
+    let s = i === 0 ? `Head ${COMPASS[h]} for about ${meters} m` : `Turn ${TURNS[`${prev}>${h}`] || ''} and go ${COMPASS[h]} for about ${meters} m`.replace('  ', ' ');
+    if (crosses.length) s += `, crossing ${joinNames(crosses)}`;
+    if (near.length) s += `, passing ${joinNames(near.map((n) => `${n.b.name} on your ${n.side}`))}`;
+    steps.push(s);
+    prev = h;
+  });
+  steps.push(`${place.name} is straight ahead`);
+  return { steps, minutes: w.min, meters: w.m };
+}
+
+// =====================================================================
+// Day planner: several classes in one day. Per campus, pick the one lot that keeps
+// the walk to the first class and back from the last class shortest (and is likely to
+// have space at arrival), then plan each walk between classes. A day on both campuses
+// gets a drive-or-bus step between them.
+// =====================================================================
+const toMin = (s) => { const m = /^(\d{1,2}):(\d{2})$/.exec(s || ''); return m && +m[1] < 24 && +m[2] < 60 ? +m[1] * 60 + +m[2] : null; };
+
+function planDay(classes, permit) {
+  if (!permitById(permit)) return { error: 'Unknown permit.' };
+  const items = classes.map((c) => ({ place: placeById(c.destination), at: toMin(c.arrive_by) }));
+  if (!items.length || items.length > 8 || items.some((c) => !c.place || c.at == null)) return { error: 'Give 1 to 8 classes, each with a destination id and an HH:MM time.' };
+  items.sort((a, b) => a.at - b.at);
+  const segments = [];
+  for (const c of items) {
+    const last = segments[segments.length - 1];
+    if (last && last.campus === c.place.campus) last.classes.push(c); else segments.push({ campus: c.place.campus, classes: [c] });
+  }
+  const out = { permit: permitName(permit), demo_time_now: fmt(S.clock), segments: [] };
+  const DRIVE_MIN = 20; // Kennesaw <-> Marietta by car, estimate
+  let prevLot = null, prevLast = null;
+  segments.forEach((seg, si) => {
+    const first = seg.classes[0], lastC = seg.classes[seg.classes.length - 1];
+    const so = { campus: campusById(seg.campus).name };
+    const ranked = recommend(first.place.id, first.at, permit);
+    // Getting here from the previous campus: drive your car over, or ride the bus from your last class
+    if (si > 0 && prevLast) {
+      const t = busTrip(prevLast.place, first.place, first.at);
+      const driveLot = ranked[0];
+      so.travel_from_previous_campus = {
+        drive: driveLot
+          ? { leave_previous_campus_by: fmt(driveLot.parkBy - DRIVE_MIN - (prevLot ? walkInfo(prevLast.place, prevLot).min : 0)), drive_minutes_estimate: DRIVE_MIN, park_at: driveLot.lot.name }
+          : null,
+        bus: t ? {
+          leave: prevLast.place.name, leave_by: fmt(t.dep - t.walk1), walk_to_stop_minutes: t.walk1, board_at_stop: t.from.name,
+          route: t.route.name, bus_departs: fmt(t.dep), ride_minutes: t.ride, ride_time_is_estimate: t.est,
+          get_off_at: t.to.name, walk_from_stop_minutes: t.walk2, arrive_about: fmt(t.arrive),
+          note: prevLot ? `Your car stays at ${prevLot.name}; ride back to it later.` : undefined,
+        } : null,
+      };
+    }
+    if (!ranked.length) {
+      const pr = parkAndRide(first.place, first.at, permit);
+      so.no_lots_for_this_permit_on_this_campus = true;
+      so.park_and_ride = pr ? tripJSON(pr.trip, pr.lot, spotsNear(pr.lot, pr.trip.from)[0]) : null;
+    } else {
+      // Score each allowed lot for the whole stay: walk in + walk back out + risk of no space at arrival
+      const best = ranked.map((x) => {
+        const back = walkInfo(x.lot, lastC.place).min;
+        const risk = x.pred <= 2 ? 20 : x.pred <= 6 ? 8 : x.pred <= 12 ? 2 : 0;
+        return { x, back, score: x.walk.min + back + risk };
+      }).sort((a, b) => a.score - b.score)[0];
+      const spot = spotsNear(best.x.lot, best.x.walk.a)[0];
+      so.park = { ...lotJSON(best.x, spot || null), walk_back_to_car_after_last_class_minutes: best.back,
+        walking_directions_to_first_class: walkDirections(best.x.lot, first.place).steps };
+      so.lot_id = best.x.lot.id;
+      prevLot = best.x.lot;
+      // Is moving the car worth it before a far-away class with a long break before it?
+      for (let i = 1; i < seg.classes.length; i++) {
+        const c = seg.classes[i], gap = c.at - seg.classes[i - 1].at;
+        const own = recommend(c.place.id, c.at, permit)[0], fromPlan = walkInfo(best.x.lot, c.place).min;
+        if (own && own.lot.id !== best.x.lot.id && gap >= 90 && fromPlan - own.walk.min >= 8) {
+          (so.tips = so.tips || []).push(`Before ${c.place.name} at ${fmt(c.at)}, you could move the car to ${own.lot.name} (${own.walk.min}-min walk instead of ${fromPlan}); about ${own.pred} spaces are likely open then.`);
+        }
+      }
+    }
+    prevLast = lastC;
+    so.classes = seg.classes.map((c, i) => {
+      const prev = seg.classes[i - 1];
+      const leg = prev ? walkInfo(prev.place, c.place) : null;
+      return { class_at: c.place.name, arrive_by: fmt(c.at), ...(leg ? { walk_from_previous_class_minutes: leg.min, walk_from_previous_class_meters: leg.m } : {}) };
+    });
+    out.segments.push(so);
+  });
+  return out;
+}
+
+// =====================================================================
 // Events & mutations
 // =====================================================================
 function log(kind, slot, extra = {}) {
@@ -944,7 +1071,8 @@ function renderFind() {
   const f = S.find;
   $('#find-empty').hidden = !!f;
   $('#find-map-card').hidden = !f;
-  if (!f) { $('#find-best').innerHTML = $('#find-alts').innerHTML = $('#find-warn').innerHTML = $('#find-bus').innerHTML = ''; return; }
+  if (!f) { $('#find-best').innerHTML = $('#find-alts').innerHTML = $('#find-warn').innerHTML = $('#find-bus').innerHTML = $('#find-day').innerHTML = ''; return; }
+  $('#find-day').innerHTML = S.dayPlan ? dayPlanHTML(S.dayPlan) : '';
   const place = placeById(f.placeId);
   const ranked = recommend(f.placeId, f.needBy, f.permit);
   if (!ranked.length) {
@@ -992,7 +1120,7 @@ function renderFind() {
     : `<div class="spot-callout none"><div class="spot-text"><div class="spot-title">No open spaces in ${esc(r.lot.short)} right now</div><div class="spot-sub">Space numbers update live as cars leave.</div></div></div>`;
   $('#find-best').innerHTML = `
     <div class="card best">
-      <div class="best-top"><span class="badge ${isTop ? 'badge-gold' : 'badge-blue'}">${isTop ? `${icon('star')} Best match` : 'Your pick'}</span><span class="badge badge-${confTone}">${r.conf} confidence</span></div>
+      <div class="best-top"><span class="badge ${isTop ? 'badge-gold' : 'badge-blue'}">${f.dayPick === r.lot.id ? `${icon('star')} Best for your day` : isTop ? `${icon('star')} Best match` : 'Your pick'}</span><span class="badge badge-${confTone}">${r.conf} confidence</span></div>
       <h3>${esc(r.lot.name)}</h3>
       <div class="muted">${campusOf(r.lot).name} campus · ${r.lot.kind} · ${esc(r.lot.area)} permit · <span class="c-${lv.k}">${r.st.open} open now</span></div>
       ${callout}
@@ -1018,6 +1146,7 @@ function renderFind() {
   const fmap = S.maps.find[place.campus];
   drawRoute(fmap, r.lot, place);
   markSpot(fmap, spot);
+  $('#find-directions').innerHTML = walkDirections(r.lot, place).steps.map((s) => `<li>${esc(s)}</li>`).join('');
 
   const alts = ranked.filter((x) => x.lot.id !== r.lot.id).slice(0, 3);
   $('#find-alts').innerHTML = alts.length ? `<div class="card alts"><h4>Other options</h4>${alts.map((x, i) => {
@@ -1239,7 +1368,35 @@ function runFind(scroll) {
   renderAll();
   if (scroll && innerWidth < 960) $('#find-best').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
-$('#find-form').addEventListener('submit', (e) => { e.preventDefault(); runFind(true); });
+$('#find-form').addEventListener('submit', (e) => { e.preventDefault(); S.dayPlan = null; runFind(true); });
+
+/** "Your day" card: the timeline from a planDay() result. */
+function dayPlanHTML(plan) {
+  const rows = [];
+  plan.segments.forEach((seg) => {
+    if (seg.travel_from_previous_campus) {
+      const { drive: d, bus: b } = seg.travel_from_previous_campus;
+      const opts = [
+        d ? `Drive: leave by ${esc(d.leave_previous_campus_by)} (about ${d.drive_minutes_estimate} min)` : '',
+        b ? `Or bus: ${esc(b.route)} from ${esc(b.board_at_stop)} at ${esc(b.bus_departs)}, arrive about ${esc(b.arrive_about)}${b.note ? `. ${esc(b.note)}` : ''}` : '',
+      ].filter(Boolean);
+      rows.push(`<li class="dp-travel">${icon('bus')}<div><b>Switch to the ${esc(seg.campus)} campus</b>${opts.map((o) => `<small>${o}</small>`).join('')}</div></li>`);
+    }
+    if (seg.park) {
+      rows.push(`<li>${icon('car')}<div><b>Park at ${esc(seg.park.lot)}${seg.park.suggested_open_space ? ` · Space ${esc(seg.park.suggested_open_space)}` : ''}</b><small>${esc(seg.campus)} campus · by ${esc(seg.park.park_by)} · ${seg.park.open_now} open now</small></div></li>`);
+    } else if (seg.park_and_ride) {
+      const p = seg.park_and_ride;
+      rows.push(`<li>${icon('bus')}<div><b>Park & ride: ${esc(p.park_at)}</b><small>Park by ${esc(p.park_by)}, ${esc(p.route)} at ${esc(p.bus_departs)}</small></div></li>`);
+    }
+    seg.classes.forEach((c, i) => {
+      const walk = i === 0 ? (seg.park ? `${seg.park.walk_minutes}-min walk from the car` : '') : `${c.walk_from_previous_class_minutes}-min walk from your last class`;
+      rows.push(`<li class="dp-class">${icon('pin')}<div><b>${esc(c.class_at)} · ${esc(c.arrive_by)}</b><small>${walk}</small></div></li>`);
+    });
+    if (seg.park) rows.push(`<li>${icon('walk')}<div><b>Back to the car</b><small>${seg.park.walk_back_to_car_after_last_class_minutes}-min walk to ${esc(seg.park.lot)}</small></div></li>`);
+    (seg.tips || []).forEach((t) => rows.push(`<li class="dp-tip">${icon('star')}<div><small>${esc(t)}</small></div></li>`));
+  });
+  return `<div class="card day-card"><div class="card-head"><h3>${icon('clock')} Your day</h3><span class="badge badge-blue">${esc(plan.permit)} permit</span></div><ol class="day-plan">${rows.join('')}</ol></div>`;
+}
 
 // "Your permit" pickers (dashboard, map, find form) all edit the same setting
 function setPermit(v) {
@@ -1349,10 +1506,11 @@ const lotJSON = (x, spot) => ({
   park_by: fmt(x.parkBy), walk_minutes: x.walk.min, walk_meters: x.walk.m, trend: trend(x.lot).label,
   ...(spot !== undefined ? { suggested_open_space: spot ? spot.id : null } : {}),
 });
-const tripJSON = (t, lot, spot) => ({
+const tripJSON = (t, lot, spot, place) => ({
   park_at: lot.name, campus: campusOf(lot).name, suggested_open_space: spot ? spot.id : null, park_by: fmt(t.parkBy),
   walk_to_stop_minutes: t.walk1, board_at_stop: t.from.name, route: t.route.name, bus_departs: fmt(t.dep),
   ride_minutes: t.ride, ride_time_is_estimate: t.est, get_off_at: t.to.name, walk_from_stop_minutes: t.walk2,
+  ...(place ? { walking_directions_from_stop: walkDirections(t.to, place, { fromStop: true }).steps } : {}),
   arrive_about: fmt(t.arrive), schedule_note: 'Demo bus schedule; live times are in the Passio GO! app.',
 });
 
@@ -1367,22 +1525,40 @@ const AI_TOOLS = {
     S.myPermit = permit;
     try { localStorage.setItem('owlpark.permit', permit); } catch { /* fine */ }
     syncPermitPickers();
+    S.dayPlan = null;
     runFind(false);
     const needBy = +m[1] * 60 + +m[2];
     const ranked = recommend(place.id, needBy, permit);
     const base = { destination: place.name, campus: campusOf(place).name, arrive_by: fmt(needBy), permit: permitName(permit), demo_time_now: fmt(S.clock) };
     if (!ranked.length) {
       const pr = parkAndRide(place, needBy, permit);
-      return { ...base, no_lots_for_this_permit_on_this_campus: true, park_and_ride: pr ? tripJSON(pr.trip, pr.lot, spotsNear(pr.lot, pr.trip.from)[0]) : null };
+      return { ...base, no_lots_for_this_permit_on_this_campus: true, park_and_ride: pr ? tripJSON(pr.trip, pr.lot, spotsNear(pr.lot, pr.trip.from)[0], place) : null };
     }
     const r = ranked[0], trip = busTrip(r.lot, place, needBy);
     const busUseful = trip && trip.walk1 + trip.walk2 < r.walk.min && (trip.parkBy > r.parkBy || r.walk.min >= 8);
     return {
       ...base,
-      recommended: lotJSON(r, spotsNear(r.lot, r.walk.a)[0] || null),
+      recommended: { ...lotJSON(r, spotsNear(r.lot, r.walk.a)[0] || null), walking_directions: walkDirections(r.lot, place).steps },
       alternatives: ranked.slice(1, 3).map((x) => lotJSON(x)),
-      bus_option: busUseful ? tripJSON(trip, r.lot, spotsNear(r.lot, trip.from)[0]) : null,
+      bus_option: busUseful ? tripJSON(trip, r.lot, spotsNear(r.lot, trip.from)[0], place) : null,
     };
+  },
+  plan_day({ classes, permit }) {
+    const plan = planDay(Array.isArray(classes) ? classes : [], permit);
+    if (plan.error) return plan;
+    // Show it: the "Your day" card, plus the first class's lot, space and route on the Find parking screen
+    const firstSeg = plan.segments.find((s) => s.lot_id);
+    const first = [...classes].sort((a, b) => toMin(a.arrive_by) - toMin(b.arrive_by))[0];
+    $('#f-place').value = first.destination;
+    $('#f-time').value = first.arrive_by.padStart(5, '0');
+    $('#f-permit').value = permit;
+    S.myPermit = permit;
+    try { localStorage.setItem('owlpark.permit', permit); } catch { /* fine */ }
+    syncPermitPickers();
+    S.dayPlan = plan;
+    runFind(false);
+    if (firstSeg && S.find) { S.find.chosen = S.find.dayPick = firstSeg.lot_id; renderAll(); }
+    return plan;
   },
   get_lot_status({ campus }) {
     const lots = campus === 'both' ? LOTS : lotsIn(campus);
@@ -1408,7 +1584,7 @@ const AI_TOOLS = {
     };
   },
 };
-const TOOL_STATUS = { find_parking: 'Planning your trip with live sensor data…', get_lot_status: 'Checking live lot counts…', get_bus_departures: 'Checking Big Owl Bus times…' };
+const TOOL_STATUS = { plan_day: 'Planning your whole day…', find_parking: 'Planning your trip with live sensor data…', get_lot_status: 'Checking live lot counts…', get_bus_departures: 'Checking Big Owl Bus times…' };
 
 const ASK = { api: [], log: [], busy: false };
 

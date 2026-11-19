@@ -678,3 +678,22 @@ select, input { font: inherit; color: var(--text); }
 .ask-suggest button { border: 1px solid rgba(255,255,255,.22); background: rgba(255,255,255,.08); color: #e2e8f0; border-radius: 999px; padding: 6px 12px; font: inherit; font-size: .8rem; font-weight: 600; cursor: pointer; }
 .ask-suggest button:hover { background: rgba(253,187,48,.2); border-color: var(--gold); color: #fff; }
 @media (max-width: 640px) { .ask-form .btn-primary { padding-left: 14px; padding-right: 14px; } .ask-msg { max-width: 100%; } }
+
+/* ---- Walking directions + day plan ---- */
+.walk-steps { margin: 12px 4px 2px; padding-left: 22px; display: grid; gap: 6px; font-size: .9rem; color: #334155; }
+.walk-steps li::marker { color: var(--blue); font-weight: 800; }
+.walk-steps li:last-child { font-weight: 700; color: var(--navy); }
+.day-card { margin-bottom: 14px; border: 2px solid var(--blue-soft); }
+.day-card h3 { display: flex; align-items: center; gap: 8px; }
+.day-card h3 i { width: 18px; height: 18px; color: var(--blue); }
+.day-plan { list-style: none; margin: 4px 0 0; padding: 0; }
+.day-plan li { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0 8px 2px; position: relative; }
+.day-plan li:not(:last-child)::before { content: ""; position: absolute; left: 10px; top: 30px; bottom: -6px; border-left: 2px dotted #cbd5e1; }
+.day-plan li > i { flex: none; width: 20px; height: 20px; color: var(--navy); margin-top: 1px; }
+.day-plan li b { display: block; color: var(--navy); }
+.day-plan li small { display: block; color: var(--muted); font-size: .82rem; margin-top: 1px; }
+.day-plan .dp-class > i { color: var(--blue); }
+.day-plan .dp-travel > i { color: var(--gold-d); }
+.day-plan .dp-tip { background: var(--gold-soft); border-radius: 10px; padding: 8px 10px; margin: 4px 0; }
+.day-plan .dp-tip > i { color: var(--gold-d); }
+.day-plan .dp-tip small { color: #7c5a05; }

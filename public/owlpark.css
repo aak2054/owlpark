@@ -697,3 +697,50 @@ select, input { font: inherit; color: var(--text); }
 .day-plan .dp-tip { background: var(--gold-soft); border-radius: 10px; padding: 8px 10px; margin: 4px 0; }
 .day-plan .dp-tip > i { color: var(--gold-d); }
 .day-plan .dp-tip small { color: #7c5a05; }
+
+/* =====================================================================
+   v2.1 polish: KPI tiles, route zoom, mobile Find, compact simulator button
+   ===================================================================== */
+
+/* KPI labels wrap instead of being cut off ("Campus occupan…") */
+.kpi-top { white-space: normal; line-height: 1.25; }
+
+/* Sensor ops has 5 tiles: 3 + 2 on mid widths, so no tile sits alone in a row */
+@media (max-width: 1180px) and (min-width: 641px) {
+  .ops-kpis { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .ops-kpis > .kpi { grid-column: span 2; }
+  .ops-kpis > .kpi:nth-child(n+4) { grid-column: span 3; }
+}
+@media (max-width: 640px) {
+  .ops-kpis > .kpi:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+
+/* Walking route header with the zoom toggle */
+.route-head { align-items: flex-start; gap: 12px; }
+.route-head > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.route-head .btn { flex-shrink: 0; }
+
+/* Result stats: keep values on one line ("8:46 AM", "1 min") */
+.bs-val { white-space: nowrap; }
+@media (max-width: 640px) {
+  .best-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .best-stats > div { display: block; padding: 10px; }
+  .bs-val { font-size: 1.2rem; }
+  .bs-label { display: block; text-align: left; font-size: .72rem; line-height: 1.3; margin-top: 2px; }
+
+  /* Ask OwlPark suggestions: one swipeable row instead of a tall stack */
+  .ask-suggest { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; scroll-snap-type: x proximity; }
+  .ask-suggest::-webkit-scrollbar { display: none; }
+  .ask-suggest button { flex-shrink: 0; white-space: nowrap; scroll-snap-align: start; }
+
+  /* Lot cards stay two-up on phones */
+  .lot-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 340px) { .lot-cards { grid-template-columns: 1fr; } }
+
+/* Simulator button: a compact round button on phones so it doesn't cover content */
+@media (max-width: 900px) {
+  .sim-fab { width: 54px; height: 54px; padding: 0; justify-content: center; right: max(16px, env(safe-area-inset-right)); }
+  .sim-fab span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .sim-fab i { width: 22px; height: 22px; }
+}

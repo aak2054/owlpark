@@ -109,7 +109,7 @@ const S = {
   myPermit: (() => { try { const v = localStorage.getItem('owlpark.permit'); return v && permitById(v) ? v : 'all'; } catch { return 'all'; } })(),
   selectedLot: null, bridge: false, watch: null,
   opsLot: LOTS[0].id, opsFilter: 'all', opsSensor: null, rebooting: new Set(),
-  find: null, prevOpen: {}, showBus: true, clockAt: Date.now(),
+  find: null, prevOpen: {}, showBus: true, clockAt: Date.now(), routeZoom: true,
   mapTheme: (() => { try { return localStorage.getItem('owlpark.mapTheme') === 'night' ? 'night' : 'day'; } catch { return 'day'; } })(), maps: { main: {}, find: {} },
   campus: (() => { try { return campusById(localStorage.getItem('owlpark.campus')) ? localStorage.getItem('owlpark.campus') : 'kennesaw'; } catch { return 'kennesaw'; } })(),
   live: new Set(), // slot keys reported by server.js (real ESP32 or simulator.js); the browser sim never touches these
@@ -851,6 +851,43 @@ function drawRoute(map, lot, place) {
   el('text', { x: 0, y: 4.5 }, pill).textContent = `${w.min} min walk`;
   map.svg.querySelectorAll('.m-bldg').forEach((b) => b.classList.toggle('dest', b.dataset.place === place.id));
   for (const id in map.lotGroups) map.lotGroups[id].classList.toggle('sel', id === lot.id);
+  zoomRoute(map, lot, place);
+}
+
+// Frame the walking route (lot + destination) instead of the whole campus, so the
+// route is readable on a phone. "Whole campus" in the card header switches back.
+function zoomRoute(map, lot, place) {
+  const campus = campusOf(lot);
+  const key = `${lot.id}|${place.id}|${S.routeZoom}`;
+  if (map.zoomKey === key) return;
+  map.zoomKey = key;
+  let target = [0, 0, campus.w, campus.h];
+  if (S.routeZoom) {
+    const pad = 70;
+    let x0 = Math.min(lot.x, place.x) - pad, y0 = Math.min(lot.y, place.y) - pad - 20;
+    let x1 = Math.max(lot.x + lot.w, place.x + place.w) + pad, y1 = Math.max(lot.y + lot.h, place.y + place.h) + pad;
+    // Keep a sensible minimum size and a landscape-ish shape, then stay inside the campus
+    const minW = 420, minH = 300;
+    let w = Math.max(x1 - x0, minW, (y1 - y0) * 1.1), h = Math.max(y1 - y0, minH, w * 0.62);
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    w = Math.min(w, campus.w); h = Math.min(h, campus.h);
+    x0 = clamp(cx - w / 2, 0, campus.w - w); y0 = clamp(cy - h / 2, 0, campus.h - h);
+    target = [x0, y0, w, h];
+  }
+  const from = (map.svg.getAttribute('viewBox') || '').split(/\s+/).map(Number);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce || from.length !== 4 || map.svg.getBoundingClientRect().width === 0) {
+    map.svg.setAttribute('viewBox', target.map((v) => v.toFixed(1)).join(' '));
+    return;
+  }
+  const t0 = performance.now(), dur = 520;
+  cancelAnimationFrame(map.zoomRaf);
+  const tick = (now) => {
+    const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+    map.svg.setAttribute('viewBox', from.map((v, i) => (v + (target[i] - v) * e).toFixed(1)).join(' '));
+    if (p < 1) map.zoomRaf = requestAnimationFrame(tick);
+  };
+  map.zoomRaf = requestAnimationFrame(tick);
 }
 
 // =====================================================================
@@ -879,7 +916,9 @@ function renderAll() {
     }
   }
   $('#bridge-dot').classList.toggle('on', S.bridge);
-  $('#bridge-text').textContent = S.bridge ? 'ESP32 bridge connected' : 'Demo simulation';
+  // Only claim hardware when the server has actually forwarded sensor readings
+  $('#bridge-text').textContent = !S.bridge ? 'Demo simulation'
+    : S.live.size ? `${S.live.size} live sensor${S.live.size === 1 ? '' : 's'} reporting` : 'Sensor server online';
   if (S.view === 'dashboard') renderDashboard();
   else if (S.view === 'map') renderMap();
   else if (S.view === 'find') renderFind();
@@ -1126,8 +1165,8 @@ function renderFind() {
       ${callout}
       <div class="best-stats">
         <div><span class="bs-val">~${r.pred}</span><span class="bs-label">spaces likely open at ${fmt(r.parkBy)}</span></div>
-        <div><span class="bs-val">${r.walk.min} min</span><span class="bs-label">walk · ${r.walk.m} m to ${esc(place.name)}</span></div>
-        <div><span class="bs-val">${fmt(r.parkBy)}</span><span class="bs-label">park by this time to arrive at ${fmt(f.needBy)}</span></div>
+        <div><span class="bs-val">${r.walk.min} min</span><span class="bs-label">walk · ${r.walk.m} m</span></div>
+        <div><span class="bs-val">${fmt(r.parkBy)}</span><span class="bs-label">park by, to arrive at ${fmt(f.needBy)}</span></div>
       </div>
       <ul class="reasons">
         <li>${icon('check')}<span>${r.st.open} spaces open right now, ${tr.label.toLowerCase()}</span></li>
@@ -1719,6 +1758,13 @@ function init() {
     S.maps.find[c.id] = buildMap($('#find-map'), c);
   }
   setMapTheme(S.mapTheme);
+  // Open Find parking with a worked example (the form's default trip) instead of an empty page
+  runFind(false);
+  $('#route-zoom').onclick = () => {
+    S.routeZoom = !S.routeZoom;
+    $('#route-zoom').innerHTML = S.routeZoom ? `${icon('map')}Whole campus` : `${icon('pin')}Zoom to route`;
+    invalidate();
+  };
 
   setInterval(() => { if (S.auto) for (let i = 0; i < S.speed; i++) step(); }, 1200);
   setInterval(() => { if (S.auto) { S.clock = (S.clock + S.speed) % 1440; S.clockAt = Date.now(); invalidate(); } }, 4000);

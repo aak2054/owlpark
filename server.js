@@ -134,7 +134,8 @@ function serveStatic(req, res) {
     if (st.isDirectory()) { res.writeHead(301, { Location: urlPath + "/" }); return res.end(); }
     fs.readFile(file, (err2, buf) => {
       if (err2) return json(res, 404, { error: "not found" });
-      res.writeHead(200, { "Content-Type": MIME[path.extname(file)] || "application/octet-stream" });
+      // no-cache: browsers revalidate, so an updated app never shows stale files mid-demo
+      res.writeHead(200, { "Content-Type": MIME[path.extname(file)] || "application/octet-stream", "Cache-Control": "no-cache" });
       res.end(buf);
     });
   });
